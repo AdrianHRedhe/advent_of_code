@@ -51,69 +51,84 @@ func transpose(rows []string) []string {
 
 	columns := make([]string, m)
 
-	matrix := make([][]string, m)
-	for i, row := range rows {
-		matrix[i] = make([]string, n)
+	matrix := make([][]rune, m)
+	for j := range m {
+		matrix[j] = make([]rune, n)
+	}
 
+	for i, row := range rows {
 		for j, char := range row {
-			matrix[j][i] = string(char)
+			matrix[j][i] = char
 		}
 	}
 
-	for _, column := range matrix {
-		column := strings.Join(column, "")
-		columns = append(columns, column)
+	for i := range matrix {
+		columns[i] = string(matrix[i])
 	}
 	return columns
 }
 
 func count_vertical(rows []string, substring string) int {
-	counter := 0
-
-	columns := make([][]string, len(rows))
-	for i := range columns {
-		columns[i] = make([]string, len(rows[0]))
-	}
-
-	for i, row := range rows {
-		for j, char := range row {
-			columns[j][i] = string(char)
-		}
-	}
-
-	for _, column := range columns {
-		column_as_string := strings.Join(column, "")
-		counter += strings.Count(column_as_string, substring)
-	}
-	return counter
+	columns := transpose(rows)
+	return count_horizontal(columns, substring)
 }
 
 func count_left_diagonal(rows []string, substring string) int {
 	counter := 0
-
-	columns := make([][]string, len(rows))
-	for i := range columns {
-		columns[i] = make([]string, len(rows[0]))
+	n, m := len(rows), len(rows[0])
+	matrix := make([][]string, n)
+	for i := range matrix {
+		matrix[i] = strings.Split(rows[i], "")
 	}
+
+	for i := range matrix {
+		if i >= (n - len(substring)) {
+			continue
+		}
+		for j := range matrix {
+			if j >= (m - len(substring)) {
+				continue
+			}
+			possible_substring := ""
+			for idx := range len(substring) {
+				possible_substring += matrix[i+idx][j+idx]
+			}
+			if possible_substring == substring {
+				counter += 1
+			}
+		}
+	}
+
 	return counter
 }
 
 func count_right_diagonal(rows []string, substring string) int {
-	return 0
+	// columns := transpose(rows)
+	// fmt.Println(len(columns), len(columns[0]))
+	return 0 //count_left_diagonal(columns, substring)
 }
 
 func count_diagonal(rows []string, substring string) int {
 	counter := 0
-	counter += count_left_diagonal(rows, "XMAS")
-	counter += count_right_diagonal(rows, "XMAS")
-	return 0
+	counter += count_left_diagonal(rows, substring)
+	counter += count_right_diagonal(rows, substring)
+	return counter
 }
 
 func count_backwards(rows []string, substring string) int {
+	string_as_runes := []rune(substring)
+	reversed_string_as_runes := make([]rune, len(substring))
+
+	for i, char := range string_as_runes {
+		reversed_string_as_runes[len(substring)-i-1] = char
+	}
+
+	reversed_substring := string(reversed_string_as_runes)
+	fmt.Println(reversed_substring)
 	counter := 0
-	counter += count_horizontal(rows, "XMAS")
-	counter += count_vertical(rows, "XMAS")
-	counter += count_diagonal(rows, "XMAS")
+	counter += count_horizontal(rows, reversed_substring)
+	counter += count_vertical(rows, reversed_substring)
+	counter += count_diagonal(rows, reversed_substring)
 	return 0
 }
 
