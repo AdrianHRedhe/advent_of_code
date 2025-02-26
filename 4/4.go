@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 	//"regexp"
-	"strings"
+	// "strings"
 )
 
 func read_input() []string {
@@ -32,121 +32,75 @@ func read_input() []string {
 	return lines
 }
 
-//r := regexp.MustCompile("XMAS")
-//n := r.FindAllString(lines, -1)
-
-// return len(n) //strings.Count(lines, "xmas")
-
-func count_horizontal(rows []string, substring string) int {
-	counter := 0
-	// check if possible with continuing outside of lines
-	for _, row := range rows {
-		counter += strings.Count(row, substring)
-	}
-	return counter
-}
-
-func transpose(rows []string) []string {
+func make_matrix(rows []string) [][]string {
 	n, m := len(rows), len(rows[0])
 
-	columns := make([]string, m)
-
-	matrix := make([][]rune, m)
+	matrix := make([][]string, m)
 	for j := range m {
-		matrix[j] = make([]rune, n)
+		matrix[j] = make([]string, n)
 	}
 
 	for i, row := range rows {
 		for j, char := range row {
-			matrix[j][i] = char
+			matrix[j][i] = string(char)
 		}
 	}
 
-	for i := range matrix {
-		columns[i] = string(matrix[i])
+	return matrix
+}
+
+type coord struct {
+	x, y int
+}
+
+func make_matrix_map(rows []string) map[coord]string {
+
+	// X, Y := len(rows), len(rows[0])
+	matrix := make(map[coord]string)
+
+	for i, row := range rows {
+		for j, char := range row {
+			matrix[coord{i, j}] = string(char)
+		}
 	}
-	return columns
+
+	return matrix
 }
 
-func count_vertical(rows []string, substring string) int {
-	columns := transpose(rows)
-	return count_horizontal(columns, substring)
-}
-
-func count_left_diagonal(rows []string, substring string) int {
+func check_all_directions(matrix map[coord]string, start coord, substring string) int {
 	counter := 0
-	n, m := len(rows), len(rows[0])
-	matrix := make([][]string, n)
-	for i := range matrix {
-		matrix[i] = strings.Split(rows[i], "")
-	}
+	x, y := start.x, start.y
 
-	for i := range matrix {
-		if i >= (n - len(substring)) {
-			continue
+	possible_directions := []coord{{1, -1}, {1, 0}, {0, 1}, {0, -1}, {0, 1}, {-1, -1}, {-1, 0}, {-1, 1}}
+	for _, possible_direction := range possible_directions {
+		dx, dy := possible_direction.x, possible_direction.y
+		found_string := ""
+		for i := range substring {
+			found_string += matrix[coord{x + dx*i, y + dy*i}]
 		}
-		for j := range matrix {
-			if j >= (m - len(substring)) {
-				continue
-			}
-			possible_substring := ""
-			for idx := range len(substring) {
-				possible_substring += matrix[i+idx][j+idx]
-			}
-			if possible_substring == substring {
-				counter += 1
-			}
+
+		if found_string == substring {
+			counter += 1
 		}
 	}
 
 	return counter
 }
 
-func count_right_diagonal(rows []string, substring string) int {
-	// columns := transpose(rows)
-	// fmt.Println(len(columns), len(columns[0]))
-	return 0 //count_left_diagonal(columns, substring)
-}
+func count_all_matches(rows []string, substring string) int {
+	n_matches := 0
+	matrix := make_matrix_map(rows)
 
-func count_diagonal(rows []string, substring string) int {
-	counter := 0
-	counter += count_left_diagonal(rows, substring)
-	counter += count_right_diagonal(rows, substring)
-	return counter
-}
-
-func count_backwards(rows []string, substring string) int {
-	string_as_runes := []rune(substring)
-	reversed_string_as_runes := make([]rune, len(substring))
-
-	for i, char := range string_as_runes {
-		reversed_string_as_runes[len(substring)-i-1] = char
+	for xy_pair := range matrix {
+		n_matches += check_all_directions(matrix, xy_pair, substring)
 	}
 
-	reversed_substring := string(reversed_string_as_runes)
-	fmt.Println(reversed_substring)
-	counter := 0
-	counter += count_horizontal(rows, reversed_substring)
-	counter += count_vertical(rows, reversed_substring)
-	counter += count_diagonal(rows, reversed_substring)
-	return 0
-}
-
-func count_xmas(rows []string) int {
-	n_xmas := 0
-	n_xmas += count_horizontal(rows, "XMAS")
-	n_xmas += count_vertical(rows, "XMAS")
-	n_xmas += count_diagonal(rows, "XMAS")
-	n_xmas += count_backwards(rows, "XMAS")
-
-	return n_xmas
+	return n_matches
 }
 
 func main() {
 	rows := read_input()
-
-	n_xmas := count_xmas(rows)
+	n_xmas := count_all_matches(rows, "XMAS")
+	// n_xmas := count_xmas(rows)
 	fmt.Println("XMAS counter 1: ", n_xmas)
-
-	// fmt.Println("XMAS counter 1: ", total_distance)
 }
