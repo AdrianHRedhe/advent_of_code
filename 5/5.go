@@ -124,9 +124,91 @@ func part_1(rules []string, inputs []string) int {
 	return counter
 }
 
+func switch_index_location(idx int, instructions []string, rule_map_next map[string][]string, rule_map_prev map[string][]string) []string {
+	current := instructions[idx]
+	var previous []string
+	var upcoming []string
+
+	if idx == 0 {
+		previous = []string{}
+	} else {
+		previous = instructions[0 : idx-1]
+	}
+
+	if idx == len(instructions)-1 {
+		upcoming = []string{}
+	} else {
+		upcoming = instructions[idx+1:]
+	}
+
+	for _, prev := range previous {
+		if slices.Contains(rule_map_prev[prev], current) {
+			// Current should be before Prev => rule is broken
+			// so current should switch location with previous
+			instructions[idx-1], instructions[idx] = instructions[idx], instructions[idx-1]
+			return instructions
+		}
+	}
+
+	for _, next := range upcoming {
+		if slices.Contains(rule_map_next[next], current) {
+			// Current should be after Next => rule is broken
+			// so current should switch location with upcoming
+			instructions[idx+1], instructions[idx] = instructions[idx], instructions[idx+1]
+			return instructions
+		}
+	}
+
+	return instructions
+}
+
+func order_it(instructions []string, rule_map_next map[string][]string, rule_map_prev map[string][]string) []string {
+	for idx := range instructions {
+		instructions = switch_index_location(idx, instructions, rule_map_next, rule_map_prev)
+	}
+
+	for check_one_input(strings.Join(instructions, ","), rule_map_next, rule_map_prev) == 0 {
+		for idx := range instructions {
+			instructions = switch_index_location(idx, instructions, rule_map_next, rule_map_prev)
+		}
+	}
+
+	return instructions
+}
+
+func return_middle_of_ordered_wrong_inputs(input string, rule_map_next map[string][]string, rule_map_prev map[string][]string) int {
+	instructions := strings.Split(input, ",")
+	for idx := range instructions {
+		if !check_one_idx(idx, instructions, rule_map_next, rule_map_prev) {
+			ordered := order_it(instructions, rule_map_next, rule_map_prev)
+			middle_index := int(len(instructions) / 2)
+			return_value, err := strconv.Atoi(ordered[middle_index])
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			return return_value
+		}
+	}
+	return 0
+}
+
+func part_2(rules []string, inputs []string) int {
+	rule_map_next, rule_map_prev := get_rule_maps(rules)
+	counter := 0
+	for _, input := range inputs[1:] {
+		counter += return_middle_of_ordered_wrong_inputs(input, rule_map_next, rule_map_prev)
+	}
+
+	return counter
+}
+
 func main() {
 	rules, inputs := read_input()
 
 	part_1 := part_1(rules, inputs)
 	fmt.Println(part_1)
+
+	part_2 := part_2(rules, inputs)
+	fmt.Println(part_2)
 }
