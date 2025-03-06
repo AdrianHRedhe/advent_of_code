@@ -7,6 +7,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"sync"
 )
 
 func read_input() []string {
@@ -97,15 +98,91 @@ func count_locations(lab_map map[coord]string) int {
 	return counter
 }
 
+func get_guard_position(lab_map map[coord]string) (coord, string) {
+	guard_states := []string{"^", ">", "v", "<"}
+	for xy, value := range lab_map {
+		if slices.Contains(guard_states, value) {
+			return xy, value
+		}
+	}
+	return coord{-1, -1}, ""
+}
+
+func has_loop(temp_lab_map map[coord]string, location_of_obstacle coord) (has_loop bool) {
+	temp_lab_map[location_of_obstacle] = "#"
+	previous_guard_locations := make(map[coord][]string)
+
+	is_completed := false
+	for !is_completed {
+		temp_lab_map, is_completed = action(temp_lab_map)
+
+		guard_position, guard_state := get_guard_position(temp_lab_map)
+		if slices.Contains(previous_guard_locations[guard_position], guard_state) {
+			if guard_state != "" {
+				return true
+			}
+		}
+
+		previous_guard_locations[guard_position] = append(previous_guard_locations[guard_position], guard_state)
+	}
+	return false
+}
+
+func count_all_possible_loops(lab_map map[coord]string, original_guard_position coord, original_guard_state string) int {
+	// The lab map has already found the possible candidates
+	// to put in an obstacle but is missing the guard.
+	lab_map[original_guard_position] = original_guard_state
+
+	// Use concurrency in GO.
+	var wg sync.WaitGroup
+	results := make(chan int)
+
+	for xy, value := range lab_map {
+		if value == "X" {
+			wg.Add(1)
+
+			go func(xy coord) {
+				defer wg.Done()
+				temp_lab_map := make(map[coord]string)
+				for xy, value := range lab_map {
+					temp_lab_map[xy] = value
+				}
+
+				if has_loop(temp_lab_map, xy) {
+					results <- 1
+				} else {
+					results <- 0
+				}
+			}(xy)
+		}
+	}
+
+	go func() {
+		wg.Wait()
+		close(results) // Close the channel once all goroutines are done
+	}()
+
+	counter := 0
+	for result := range results {
+		counter += result
+	}
+
+	return counter
+}
+
 func main() {
 	lines := read_input()
 	// part 1:
 	lab_map := get_lab_map(lines)
+	original_guard_position, original_guard_state := get_guard_position(lab_map)
 	is_completed := false
 	for !is_completed {
 		lab_map, is_completed = action(lab_map)
 	}
 	n_locations_visited := count_locations(lab_map)
-	// total_similarity := array_total_similarity(arr1, arr2)
 	fmt.Println("n_locations_visited: ", n_locations_visited)
+
+	// part 2
+	n_locations_with_possible_loops := count_all_possible_loops(lab_map, original_guard_position, original_guard_state)
+	fmt.Println("n_locations_with_possible_loops:", n_locations_with_possible_loops)
 }
