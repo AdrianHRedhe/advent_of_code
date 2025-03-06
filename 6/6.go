@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"slices"
 	"strings"
 	"sync"
 )
@@ -48,14 +47,14 @@ func get_lab_map(lines []string) map[coord]string {
 	return lab_map
 }
 
-func action(lab_map map[coord]string) (updated_lab_map map[coord]string, completed bool) {
-	guard_states := []string{"^", ">", "v", "<"}
+func action(lab_map map[coord]string) (updated_lab_map map[coord]string, completed bool, guard_loc coord, guard_state string) {
+	guard_states := "^>v<"
 	movement_states := []coord{{-1, 0}, {0, 1}, {1, 0}, {0, -1}}
 
 	// a) find the tracker and the direction
 	for xy, value := range lab_map {
-		if slices.Contains(guard_states, value) {
-			guard_state_index := slices.Index(guard_states, value)
+		if strings.Contains(guard_states, value) {
+			guard_state_index := strings.Index(guard_states, value)
 			movement_state := movement_states[guard_state_index]
 
 			x, y := xy.x, xy.y
@@ -67,25 +66,25 @@ func action(lab_map map[coord]string) (updated_lab_map map[coord]string, complet
 
 			if !is_inside_map {
 				lab_map[coord{x, y}] = "X"
-				return lab_map, true
+				return lab_map, true, coord{x + dx, y + dy}, string(guard_states[guard_state_index])
 			}
 
 			// c) if next index does have a # then only turn it and
 			// call function again
 			if next_value == "#" {
 				next_guard_state := (guard_state_index + 1) % len(guard_states)
-				lab_map[coord{x, y}] = guard_states[next_guard_state]
-				return lab_map, false
+				lab_map[coord{x, y}] = string(guard_states[next_guard_state])
+				return lab_map, false, coord{x, y}, string(guard_states[next_guard_state])
 			}
 
 			// d) if next index does not have a # then move there
 			// and put X on old location
 			lab_map[coord{x + dx, y + dy}] = lab_map[coord{x, y}]
 			lab_map[coord{x, y}] = "X"
-			return lab_map, false
+			return lab_map, false, coord{x + dx, y + dy}, string(guard_states[guard_state_index])
 		}
 	}
-	return lab_map, false
+	return lab_map, false, coord{-1, -1}, ""
 }
 
 func count_locations(lab_map map[coord]string) int {
@@ -98,32 +97,23 @@ func count_locations(lab_map map[coord]string) int {
 	return counter
 }
 
-func get_guard_position(lab_map map[coord]string) (coord, string) {
-	guard_states := []string{"^", ">", "v", "<"}
-	for xy, value := range lab_map {
-		if slices.Contains(guard_states, value) {
-			return xy, value
-		}
-	}
-	return coord{-1, -1}, ""
-}
-
 func has_loop(temp_lab_map map[coord]string, location_of_obstacle coord) (has_loop bool) {
 	temp_lab_map[location_of_obstacle] = "#"
-	previous_guard_locations := make(map[coord][]string)
+	previous_guard_locations := make(map[coord]string)
+	var guard_position coord
+	var guard_state string
 
 	is_completed := false
 	for !is_completed {
-		temp_lab_map, is_completed = action(temp_lab_map)
+		temp_lab_map, is_completed, guard_position, guard_state = action(temp_lab_map)
 
-		guard_position, guard_state := get_guard_position(temp_lab_map)
-		if slices.Contains(previous_guard_locations[guard_position], guard_state) {
+		if strings.Contains(previous_guard_locations[guard_position], guard_state) {
 			if guard_state != "" {
 				return true
 			}
 		}
 
-		previous_guard_locations[guard_position] = append(previous_guard_locations[guard_position], guard_state)
+		previous_guard_locations[guard_position] = previous_guard_locations[guard_position] + guard_state
 	}
 	return false
 }
@@ -174,10 +164,14 @@ func main() {
 	lines := read_input()
 	// part 1:
 	lab_map := get_lab_map(lines)
-	original_guard_position, original_guard_state := get_guard_position(lab_map)
-	is_completed := false
+	var is_completed bool
+	var original_guard_position coord
+	var original_guard_state string
+
+	lab_map, is_completed, original_guard_position, original_guard_state = action(lab_map)
+
 	for !is_completed {
-		lab_map, is_completed = action(lab_map)
+		lab_map, is_completed, _, _ = action(lab_map)
 	}
 	n_locations_visited := count_locations(lab_map)
 	fmt.Println("n_locations_visited: ", n_locations_visited)
