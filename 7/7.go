@@ -80,6 +80,26 @@ func operation_add(line_variables []int) []int {
 	return output
 }
 
+func operation_concat(line_variables []int) []int {
+	if len(line_variables) == 1 {
+		return line_variables
+	}
+	output := make([]int, len(line_variables))
+	copy(output, line_variables)
+	output = output[1:]
+
+	x, y := line_variables[0], line_variables[1]
+	z_string := strconv.Itoa(x) + strconv.Itoa(y)
+	z, err := strconv.Atoi(z_string)
+	if err != nil {
+		log.Fatal("wrong convert")
+		os.Exit(1)
+	}
+
+	output[0] = z
+	return output
+}
+
 func action(inputs [][]int) (outputs [][]int) {
 	for _, input := range inputs {
 		outputs = append(outputs, operation_times(input))
@@ -103,6 +123,30 @@ func check_line(test_value int, line_variables []int) int {
 	return 0
 }
 
+func action_part_2(inputs [][]int) (outputs [][]int) {
+	for _, input := range inputs {
+		outputs = append(outputs, operation_times(input))
+		outputs = append(outputs, operation_add(input))
+		outputs = append(outputs, operation_concat(input))
+	}
+	return outputs
+}
+
+func check_line_part_2(test_value int, line_variables []int) int {
+	results := make([][]int, 1)
+	results[0] = line_variables
+	for range line_variables {
+		results = action_part_2(results)
+	}
+
+	for _, result := range results {
+		if result[0] == test_value {
+			return test_value
+		}
+	}
+	return 0
+}
+
 func main() {
 	test_values, variables := read_input()
 
@@ -112,5 +156,13 @@ func main() {
 		line_variables := variables[i]
 		sum_of_valid_test_values += check_line(test_value, line_variables)
 	}
-	fmt.Println("sum_of_valid_test_values:", sum_of_valid_test_values)
+	fmt.Println("sum_of_valid_test_values part 1:", sum_of_valid_test_values)
+
+	sum_of_valid_test_values = 0
+	for i := range test_values {
+		test_value := test_values[i]
+		line_variables := variables[i]
+		sum_of_valid_test_values += check_line_part_2(test_value, line_variables)
+	}
+	fmt.Println("sum_of_valid_test_values part 2:", sum_of_valid_test_values)
 }
