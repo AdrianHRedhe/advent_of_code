@@ -44,6 +44,8 @@ func read_input() []int {
 func split_stone(stone int) (int, int, bool) {
 	// splitting stone without relying on string conversion
 	// (slightly quicker but less readable.)
+	// original solution converted to string and then split
+	// string if the string was divisible by 2.
 	var was_split bool
 	n_digits := 0
 	residual := stone
@@ -85,25 +87,6 @@ func apply_rules(stone int) (stones []int) {
 		return stones
 	}
 
-	// Alternative version of Rule 2.
-	// stone_as_string := strconv.Itoa(stone)
-	// if len(stone_as_string)%2 == 0 {
-	// 	split_index := len(stone_as_string) / 2
-	// 	stone_string_1 := stone_as_string[:split_index]
-	// 	stone_string_2 := stone_as_string[split_index:]
-	// 	stone_1, err := strconv.Atoi(stone_string_1)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	stone_2, err := strconv.Atoi(stone_string_2)
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	stones = append(stones, stone_1)
-	// 	stones = append(stones, stone_2)
-	// 	return stones
-	// }
-
 	// Rule 3: Stone multiplied by 2024
 	new_stone := stone * multiplicator
 	stones = append(stones, new_stone)
@@ -112,6 +95,8 @@ func apply_rules(stone int) (stones []int) {
 }
 
 func blink(stones []int) []int {
+	// Original naive implementation of blink worked ok for
+	// 25 iterations
 	var next_stones []int
 	for _, stone := range stones {
 		next_stones = append(next_stones, apply_rules(stone)...)
@@ -120,6 +105,9 @@ func blink(stones []int) []int {
 }
 
 func blink_and_conquer(stones []int) []int {
+	// The idea was to create a version which splits the
+	// blink up. However, I then realized that simply using
+	// memorization was a better idea.
 	n_workers := 16
 	next_stones := make([]int, 0, len(stones)*2)
 	var wg sync.WaitGroup
@@ -152,17 +140,70 @@ func blink_and_conquer(stones []int) []int {
 	return next_stones
 }
 
+func blink_and_remember(stones []int, memory map[int][]int) ([]int, map[int][]int) {
+	// This was the next version of blink which remembered
+	// what calculations had already been done.
+	var next_stones []int
+	for _, stone := range stones {
+		if precalculated_stones, in_memory := memory[stone]; in_memory {
+			next_stones = append(next_stones, precalculated_stones...)
+		} else {
+			calculated_stones := apply_rules(stone)
+			next_stones = append(next_stones, calculated_stones...)
+			memory[stone] = calculated_stones
+		}
+	}
+	return next_stones, memory
+}
+
+func blink_and_remember_count_once(stone_map map[int]int, memory map[int][]int) (map[int]int, map[int][]int) {
+	// Final version of blink, using memory to store
+	// precalculated stones and keeping track of how many of
+	// each stone exists to only count each group of stones
+	// once.
+	next_stone_map := make(map[int]int)
+	for stone, stone_count := range stone_map {
+		if precalculated_stones, in_memory := memory[stone]; in_memory {
+			for _, stone := range precalculated_stones {
+				next_stone_map[stone] += stone_count
+			}
+		} else {
+			calculated_stones := apply_rules(stone)
+			for _, stone := range calculated_stones {
+				next_stone_map[stone] += stone_count
+			}
+			memory[stone] = calculated_stones
+		}
+	}
+	return next_stone_map, memory
+}
+
 func main() {
 	stones := read_input()
+
+	// This is used to keep track of how many of each stone
+	// we have rather than keeping each stone as an element
+	// in a slice.
+	stone_map := make(map[int]int)
+	for _, stone := range stones {
+		stone_map[stone] += 1
+	}
+	// This keeps track of all previous stone calculations.
+	memory := make(map[int][]int)
 	for range 25 {
-		stones = blink(stones)
+		stone_map, memory = blink_and_remember_count_once(stone_map, memory)
 	}
-	fmt.Println("After blinking 25 times part 1:", len(stones))
-	it := 25
+	count := 0
+	for _, stone_count := range stone_map {
+		count += stone_count
+	}
+	fmt.Println("After blinking 25 times part 1:", count)
 	for range 50 {
-		log.Println(it)
-		stones = blink(stones)
-		it++
+		stone_map, memory = blink_and_remember_count_once(stone_map, memory)
 	}
-	fmt.Println("After blinking 75 times part 2:", len(stones))
+	count = 0
+	for _, stone_count := range stone_map {
+		count += stone_count
+	}
+	fmt.Println("After blinking 75 times part 2:", count)
 }
