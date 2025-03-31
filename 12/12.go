@@ -57,6 +57,14 @@ const (
 	down  = 1
 	left  = 2
 	right = 3
+	N     = 0
+	S     = 1
+	W     = 2
+	E     = 3
+	NW    = 4
+	NE    = 5
+	SW    = 6
+	SE    = 7
 )
 
 func getMatrix(lines []string) map[coord]string {
@@ -145,6 +153,92 @@ func calculateCosts(regions []region) (totalCost int) {
 	return totalCost
 }
 
+func countSides(region region) (numberOfSides int) {
+	// there are as many sides as there are corners
+	// So we will count the number of corners.
+	directions := map[int]coord{
+		N:  {0, 1},
+		S:  {0, -1},
+		W:  {-1, 0},
+		E:  {1, 0},
+		NW: {-1, 1},
+		NE: {1, 1},
+		SW: {-1, -1},
+		SE: {1, -1},
+	}
+	coords := region.coords
+	nCorners := 0
+
+	for _, coord := range coords {
+		N_xy := coord.move(directions[N])
+		S_xy := coord.move(directions[S])
+		W_xy := coord.move(directions[W])
+		E_xy := coord.move(directions[E])
+		NW_xy := coord.move(directions[NW])
+		NE_xy := coord.move(directions[NE])
+		SW_xy := coord.move(directions[SW])
+		SE_xy := coord.move(directions[SE])
+
+		if (slices.Contains(coords, N_xy)) && (slices.Contains(coords, W_xy)) {
+			if !slices.Contains(coords, NW_xy) {
+				//    . X
+				//    X X
+				//    Here is a corner.
+				nCorners += 1
+			}
+		}
+		if !(slices.Contains(coords, N_xy)) && !(slices.Contains(coords, W_xy)) {
+			//    . .
+			//    . X
+			//    Here is another corner.
+			nCorners += 1
+		}
+
+		if (slices.Contains(coords, S_xy)) && (slices.Contains(coords, W_xy)) {
+			if !slices.Contains(coords, SW_xy) {
+				//    X X
+				//    . X
+				//    Here is a corner.
+				nCorners += 1
+			}
+		}
+		if !(slices.Contains(coords, S_xy)) && !(slices.Contains(coords, W_xy)) {
+			//    . X
+			//    . .
+			//    Here is another corner.
+			nCorners += 1
+		}
+
+		if (slices.Contains(coords, N_xy)) && (slices.Contains(coords, E_xy)) {
+			if !slices.Contains(coords, NE_xy) {
+				nCorners += 1
+			}
+		}
+		if !(slices.Contains(coords, N_xy)) && !(slices.Contains(coords, E_xy)) {
+			nCorners += 1
+		}
+		if (slices.Contains(coords, S_xy)) && (slices.Contains(coords, E_xy)) {
+			if !slices.Contains(coords, SE_xy) {
+				nCorners += 1
+			}
+		}
+		if !(slices.Contains(coords, S_xy)) && !(slices.Contains(coords, E_xy)) {
+			nCorners += 1
+		}
+	}
+	numberOfSides = nCorners
+	return numberOfSides
+}
+
+func calculateCostsAtDiscount(regions []region) (cost int) {
+	for _, region := range regions {
+		numberOfSides := countSides(region)
+		area := len(region.coords)
+		cost += area * numberOfSides
+	}
+	return cost
+}
+
 func main() {
 	lines := readInput()
 	matrix := getMatrix(lines)
@@ -152,4 +246,6 @@ func main() {
 	totalCost := calculateCosts(regions)
 	fmt.Println("total cost of fence part 1: ", totalCost)
 
+	costAtDiscount := calculateCostsAtDiscount(regions)
+	fmt.Println("total cost at discount part 2: ", costAtDiscount)
 }
