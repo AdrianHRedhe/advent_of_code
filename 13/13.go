@@ -82,7 +82,7 @@ func parseSingleLine(line string) (xy coord) {
 	return xy
 }
 
-func solveSecondOrderPolynomial(clawMachine clawMachine) (cost int) {
+func solveSecondOrderPolynomial(clawMachine clawMachine, max100Presses bool) (cost int) {
 	// defined in the readme.
 	cost_a := 3
 	cost_b := 1
@@ -126,9 +126,12 @@ func solveSecondOrderPolynomial(clawMachine clawMachine) (cost int) {
 	b := (p_y*a_x - p_x*a_y) / determinant
 
 	// rule if any button is pressed 100 times then that is
-	// counted as non-solveable
-	if a > 100 || b > 100 {
-		return 0
+	// counted as non-solveable used in part 1 but not in
+	// part 2
+	if max100Presses {
+		if a > 100 || b > 100 {
+			return 0
+		}
 	}
 
 	cost = a*cost_a + b*cost_b
@@ -136,13 +139,34 @@ func solveSecondOrderPolynomial(clawMachine clawMachine) (cost int) {
 	return cost
 }
 
+func updatePrizeLocation(machines []clawMachine) (updatedMachines []clawMachine) {
+	for _, machine := range machines {
+		machine.prize.x += 10000000000000
+		machine.prize.y += 10000000000000
+		updatedMachines = append(updatedMachines, machine)
+	}
+
+	return updatedMachines
+}
+
 func main() {
 	lines := readInput()
 	machines := getClawMachines(lines)
 
+	max100Presses := true
 	total_cost := 0
 	for _, machine := range machines {
-		total_cost += solveSecondOrderPolynomial(machine)
+		total_cost += solveSecondOrderPolynomial(machine, max100Presses)
 	}
 	fmt.Println("total cost part 1:", total_cost)
+
+	// part 2 no longer constraint on the max number of
+	// presses but updated prize location
+	machines = updatePrizeLocation(machines)
+	max100Presses = false
+	total_cost = 0
+	for _, machine := range machines {
+		total_cost += solveSecondOrderPolynomial(machine, max100Presses)
+	}
+	fmt.Println("total cost part 2:", total_cost)
 }
