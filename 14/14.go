@@ -168,13 +168,15 @@ func main() {
 	guards := getGuards(lines)
 	quadrants := getQuadrants()
 
-	// part 1 100 steps in the future
 	for range 100 {
 		guards = moveOneRound(guards)
 	}
 	securityScore := calculateSecurityScore(guards, quadrants)
 
 	fmt.Println("security score part 1: ", securityScore)
-	// fmt.Println("total cost of fence part 1: ", totalCost)
-	// fmt.Println("total cost at discount part 2: ", costAtDiscount)
+
+	// for part 2 it requires visual confirmation so I will
+	// simply let it run a few times and look for the signs
+	guards = getGuards(lines)
+
 }
