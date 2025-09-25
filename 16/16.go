@@ -166,58 +166,6 @@ func createGameMap(lines []string) (map[coord]string, coord, coord) {
 	return gameMap, start, end
 }
 
-func action(
-	prevReindeer reindeer,
-	previousMovements []int,
-	previousCost int,
-	actionType int,
-	gameMap map[coord]string,
-) (
-	nextReindeer reindeer,
-	movements []int,
-	cost int,
-	canMove bool,
-) {
-	if actionType == 1 {
-		nextReindeer := prevReindeer.move()
-		nextPos := nextReindeer.pos
-
-		if gameMap[nextPos] == "#" {
-			// cannot move forward if there is something
-			// blocking you.
-			return prevReindeer, previousMovements, actionType, false
-		}
-
-		movements = append(previousMovements, actionType)
-		cost = previousCost + 1
-
-		return nextReindeer, movements, cost, true
-	}
-
-	if actionType == 2 {
-		if previousMovements[len(previousMovements)] == 3 {
-			// cannot turn clockwise directly after a turn
-			// counter clockwise
-			return prevReindeer, previousMovements, actionType, false
-		}
-		nextReindeer = prevReindeer.turnClockwise()
-	}
-
-	if actionType == 3 {
-		if previousMovements[len(previousMovements)] == 2 {
-			// cannot turn counter clockwise directly after a turn
-			// clockwise
-			return prevReindeer, previousMovements, actionType, false
-		}
-		nextReindeer = prevReindeer.turnCounterClockwise()
-	}
-
-	movements = append(previousMovements, actionType)
-	cost = previousCost + 1000
-
-	return nextReindeer, movements, cost, true
-}
-
 func djikastra(gameMap map[coord]string, start coord, end coord) (minimumCost int) {
 	// initialize the reindeer
 	startReindeer := reindeer{pos: start, direction: E}
