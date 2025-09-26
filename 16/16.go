@@ -111,6 +111,7 @@ func (current reindeer) turnCounterClockwise() reindeer {
 type State struct {
 	reindeer reindeer
 	cost     int
+	path     []coord
 }
 type PriorityQueue []*State
 
@@ -166,10 +167,10 @@ func createGameMap(lines []string) (map[coord]string, coord, coord) {
 	return gameMap, start, end
 }
 
-func djikastra(gameMap map[coord]string, start coord, end coord) (minimumCost int) {
+func calculateCostOfOptimalPath(gameMap map[coord]string, start coord, end coord) (minimumCost int) {
 	// initialize the reindeer
 	startReindeer := reindeer{pos: start, direction: E}
-	startState := State{reindeer: startReindeer, cost: 0}
+	startState := State{reindeer: startReindeer, cost: 0, path: nil}
 
 	// init priority queue
 	pq := &PriorityQueue{}
@@ -230,10 +231,101 @@ func djikastra(gameMap map[coord]string, start coord, end coord) (minimumCost in
 	return -1
 }
 
+func numberOfTilesPartOfOptimalPath(gameMap map[coord]string, start coord, end coord) (n_tiles int) {
+	optimalPathCost := calculateCostOfOptimalPath(gameMap, start, end)
+	// if there is no path to win, then 0 tiles were part of optimal path
+	if optimalPathCost == -1 {
+		n_tiles = 0
+		return n_tiles
+	}
+
+	// initialize the reindeer
+	startReindeer := reindeer{pos: start, direction: E}
+	startState := State{reindeer: startReindeer, cost: 0, path: []coord{start}}
+
+	// init priority queue
+	pq := &PriorityQueue{}
+	heap.Init(pq)
+	heap.Push(pq, &startState)
+
+	// save minimum cost per location
+	visisted := make(map[reindeer]int)
+
+	// save tiles part of optimal paths
+	optimalTiles := make(map[coord]bool)
+
+	for pq.Len() > 0 {
+		var nextReindeer reindeer
+		var newCost int
+		var newPath []coord
+
+		current := heap.Pop(pq).(*State)
+
+		// If cost is higher than optimal path then we can skip it.
+		if current.cost > optimalPathCost {
+			break
+		}
+
+		// If we have reached the end and cost is optimal these tiles are part of an optimal path.
+		if (current.reindeer.pos == end) && (current.cost == optimalPathCost) {
+			for _, tile := range current.path {
+				optimalTiles[tile] = true
+			}
+			continue
+		}
+		// We have visited this State at a cheaper price => suboptimal => skip it.
+		if prevCost, exists := visisted[current.reindeer]; exists && prevCost < current.cost {
+			continue
+		}
+		// update lowest known cost for this location since this reindeer is either seen for the
+		// first time or lower cost than last time.
+		visisted[current.reindeer] = current.cost
+
+		// try all actions for this state
+		// move forward
+		nextReindeer = current.reindeer.move()
+		// can only move forward if there is no wall
+		if gameMap[nextReindeer.pos] != "#" {
+			newCost = current.cost + 1
+			// push to heap if reindeer is seen for first time or lower cost than last time.
+			if prevCost, exists := visisted[nextReindeer]; !exists || current.cost < prevCost {
+
+				// also update paths which have been visited.
+				// Pre allocate another space in order to avoid having to move it over when we append.
+				newPath = make([]coord, len(current.path), len(current.path)+1)
+				// copy over current values
+				copy(newPath, current.path)
+				newPath = append(newPath, nextReindeer.pos)
+
+				heap.Push(pq, &State{reindeer: nextReindeer, cost: newCost, path: newPath})
+			}
+		}
+		// turn clockwise
+		nextReindeer = current.reindeer.turnClockwise()
+		newCost = current.cost + 1000
+		// push to heap if reindeer is seen for first time or lower cost than last time.
+		if prevCost, exists := visisted[nextReindeer]; !exists || current.cost < prevCost {
+			heap.Push(pq, &State{reindeer: nextReindeer, cost: newCost, path: current.path})
+		}
+		// turn counter clockwise
+		nextReindeer = current.reindeer.turnCounterClockwise()
+		newCost = current.cost + 1000
+		// push to heap if reindeer is seen for first time or lower cost than last time.
+		if prevCost, exists := visisted[nextReindeer]; !exists || current.cost < prevCost {
+			heap.Push(pq, &State{reindeer: nextReindeer, cost: newCost, path: current.path})
+		}
+	}
+
+	return len(optimalTiles)
+}
+
 func main() {
 	lines := read_input()
 	gameMap, start, end := createGameMap(lines)
-	minScore := djikastra(gameMap, start, end)
+	minScore := calculateCostOfOptimalPath(gameMap, start, end)
 
 	fmt.Println("part 1: ", minScore)
+
+	n_tiles := numberOfTilesPartOfOptimalPath(gameMap, start, end)
+	fmt.Println("part 2: ", n_tiles)
 }
