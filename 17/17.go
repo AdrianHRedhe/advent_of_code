@@ -76,6 +76,17 @@ type computer struct {
 	output       []int
 }
 
+func (current computer) swapAregister(newA int) (next computer) {
+	return computer{
+		A:            newA,
+		B:            current.B,
+		C:            current.C,
+		instructions: current.instructions,
+		pointer:      current.pointer,
+		output:       current.output,
+	}
+}
+
 func (this computer) literalOperandToComboOperand(operand int) (input int) {
 	if (operand < 0) || (6 < operand) {
 		log.Fatal("Combo operand is something else than 0-7")
@@ -255,10 +266,56 @@ func intArrayToString(input []int) string {
 	return strings.Join(stringArray, ",")
 }
 
+func getOutputFromComputer(currentComputer computer) []int {
+	// complete instructions
+	instructionsFinished := false
+
+	for !instructionsFinished {
+		currentComputer, instructionsFinished = completeNextInstruction(currentComputer)
+	}
+	return currentComputer.output
+}
+
+func isMatchingSlice(a []int, b []int) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
+
+func backtrackOutputWhichReflectsComputer(currentComputer computer) int {
+	// the number to guess, will be large as a will be divided by 8 for each round and we need 16 outputs
+	nextA := 0
+	var nextComputer computer
+	var nextOutput []int
+
+	// start with finding how the lowest number should be backtracked and go from there
+	for i := range len(currentComputer.instructions) {
+		revI := len(currentComputer.instructions) - i - 1
+		nextA = nextA << 3 // shift to left tree times => * 8 => ready to guess the next number
+		nextComputer = currentComputer.swapAregister(nextA)
+		nextOutput = getOutputFromComputer(nextComputer)
+
+		// increase until we are ready for the next number
+		for !isMatchingSlice(nextOutput, currentComputer.instructions[revI:]) {
+			nextA++
+			nextComputer = currentComputer.swapAregister(nextA)
+			nextOutput = getOutputFromComputer(nextComputer)
+		}
+
+	}
+	return nextA
+}
+
 func main() {
 	regA, regB, regC, instructions := read_input()
 	// init computer
-	p1_computer := computer{
+	currentComputer := computer{
 		A:            regA,
 		B:            regB,
 		C:            regC,
@@ -266,14 +323,10 @@ func main() {
 		pointer:      0,
 		output:       []int{},
 	}
-	// complete instructions
-	instructionsFinished := false
-
-	for !instructionsFinished {
-		p1_computer, instructionsFinished = completeNextInstruction(p1_computer)
-	}
 	// format output and print
-	p1_output := intArrayToString(p1_computer.output)
+	p1_output := intArrayToString(getOutputFromComputer(currentComputer))
 	fmt.Println("part 1: ", p1_output)
-	// fmt.Println("part 2: ", )
+
+	p2_output := backtrackOutputWhichReflectsComputer(currentComputer)
+	fmt.Println("part 2: ", p2_output)
 }
