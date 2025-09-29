@@ -83,13 +83,13 @@ func createMemorySpace() (memorySpace map[coord]string, start coord, end coord) 
 	return memorySpace, start, end
 }
 
-func corruptMemorySpace(corrupted []coord, memorySpace map[coord]string) map[coord]string {
+func corruptMemorySpace(corrupted []coord, memorySpace map[coord]string) (map[coord]string, []coord) {
 	kilobyte := 1024
 	for i := range kilobyte {
 		nextCorruptedByte := corrupted[i]
 		memorySpace[nextCorruptedByte] = "#"
 	}
-	return memorySpace
+	return memorySpace, corrupted[kilobyte:]
 }
 
 // Struct to store the state
@@ -135,11 +135,27 @@ func calculateShortestPath(corruptedMemorySpace map[coord]string, start coord, e
 	return -1
 }
 
+func findFirstBlockingByte(corruptedMemorySpace map[coord]string, remainderCorrupted []coord, start coord, end coord) coord {
+	var nextCorruptedByte coord
+	it := 0
+	for calculateShortestPath(corruptedMemorySpace, start, end) != -1 {
+		nextCorruptedByte = remainderCorrupted[it]
+		corruptedMemorySpace[nextCorruptedByte] = "#"
+
+		it++
+	}
+	return nextCorruptedByte
+}
+
 func main() {
 	corrupted := read_input()
 	memorySpace, start, end := createMemorySpace()
-	corruptedMemorySpace := corruptMemorySpace(corrupted, memorySpace)
+	corruptedMemorySpace, remainderCorrupted := corruptMemorySpace(corrupted, memorySpace)
 	shortestPath := calculateShortestPath(corruptedMemorySpace, start, end)
 
 	fmt.Println("part 1: ", shortestPath)
+
+	blockingByte := findFirstBlockingByte(corruptedMemorySpace, remainderCorrupted, start, end)
+	blockingByteAsString := strconv.Itoa(blockingByte.x) + "," + strconv.Itoa(blockingByte.y)
+	fmt.Println("part 2: ", blockingByteAsString)
 }
