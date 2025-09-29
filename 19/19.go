@@ -82,9 +82,48 @@ func countValidCombos(towels []string, patterns []string) int {
 	return count
 }
 
+func allValidCombinations(towels []string, pattern string, memory map[string]int) (nValid int) {
+	// lets do recursion E.g. base case empty string
+	if pattern == "" {
+		return 1
+	}
+
+	if count, exists := memory[pattern]; exists {
+		return count
+	}
+
+	count := 0
+
+	for _, towel := range towels {
+		if len(pattern) < len(towel) {
+			continue
+		}
+
+		if pattern[:len(towel)] == towel {
+			subpattern := pattern[len(towel):]
+			count += allValidCombinations(towels, subpattern, memory)
+		}
+	}
+
+	memory[pattern] = count
+	return count
+}
+
+func countAllValidCombos(towels []string, patterns []string) int {
+	count := 0
+	memory := make(map[string]int)
+	for _, pattern := range patterns {
+		count += allValidCombinations(towels, pattern, memory)
+	}
+	return count
+}
+
 func main() {
 	towels, patterns := read_input()
 	nValidCombos := countValidCombos(towels, patterns)
 
 	fmt.Println("part 1: ", nValidCombos)
+
+	allValidCombos := countAllValidCombos(towels, patterns)
+	fmt.Println("part 2: ", allValidCombos)
 }
