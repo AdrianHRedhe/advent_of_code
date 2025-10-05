@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"slices"
 	"sort"
 	"strings"
 )
@@ -33,7 +34,7 @@ func readInput() []string {
 }
 
 var connect2 = map[string][]string{}
-var connect3 = map[string]bool{}
+var connect3orMore = map[string]bool{}
 
 func updateConnect3(a, b string) {
 	for _, c1 := range connect2[a] {
@@ -45,8 +46,8 @@ func updateConnect3(a, b string) {
 			if c != a && c != b {
 				computers := []string{a, b, c}
 				sort.Strings(computers)
-				key := computers[0] + "-" + computers[1] + "-" + computers[2]
-				connect3[key] = true
+				key := computers[0] + "," + computers[1] + "," + computers[2]
+				connect3orMore[key] = true
 			}
 		}
 
@@ -64,8 +65,8 @@ func part1(connections []string) int {
 		updateConnect3(a, b)
 	}
 	count := 0
-	for key := range connect3 {
-		for _, computer := range strings.Split(key, "-") {
+	for key := range connect3orMore {
+		for _, computer := range strings.Split(key, ",") {
 			if string(computer[0]) == "t" {
 				count++
 				break
@@ -75,9 +76,61 @@ func part1(connections []string) int {
 	return count
 }
 
+func firstArrayContainedInSecond(first, second []string) bool {
+	for _, item := range first {
+		if !slices.Contains(second, item) {
+			return false
+		}
+	}
+	return true
+}
+
+func updateConnect3orMore() {
+	for current, firstOrderNeighbours := range connect2 {
+		clique := []string{current}
+		for _, firstOrderNeighbour := range firstOrderNeighbours {
+			secondOrderNeighbours := connect2[firstOrderNeighbour]
+			if firstArrayContainedInSecond(clique, secondOrderNeighbours) {
+				if !slices.Contains(clique, firstOrderNeighbour) {
+					clique = append(clique, firstOrderNeighbour)
+				}
+			}
+		}
+		sort.Strings(clique)
+		key := ""
+		for i, computer := range clique {
+			if i == 0 {
+				key += computer
+			} else {
+				key += "," + computer
+			}
+		}
+		connect3orMore[key] = true
+	}
+	return
+}
+
+func part2() (password string) {
+	updateConnect3orMore()
+
+	password = ""
+	for key := range connect3orMore {
+		if len(key) > len(password) {
+			for _, computer := range strings.Split(key, ",") {
+				if string(computer[0]) == "t" {
+					password = key
+				}
+			}
+		}
+	}
+	return password
+}
+
 func main() {
 	connections := readInput()
 	count := part1(connections)
-
 	fmt.Println("part 1: ", count)
+
+	password := part2()
+	fmt.Println("part 2: ", password)
 }
