@@ -94,6 +94,70 @@ func nextSecretNumbers(current int, depth int) (next int) {
 	return next
 }
 
+func getPricesAndDeltas(secretNumber int) (prices []int, deltas []int) {
+	depth := 2000
+	// we need to go one level deeper than depth since the first number needs
+	// to be accounted for as well
+	prices = make([]int, depth+1)
+	deltas = make([]int, depth+1)
+	current := secretNumber
+
+	for i := range depth + 1 {
+		currentPrice := current % 10
+		prices[i] = currentPrice
+		if i == 0 {
+			deltas[i] = 0
+		} else {
+			deltas[i] = prices[i] - prices[i-1]
+		}
+		current = nextSecretNumber(current)
+	}
+	return prices, deltas
+}
+
+type sequence [4]int
+
+func calculateBananaMap(deltas []int, prices []int) (localBananasPerSeq map[sequence]int) {
+	localBananasPerSeq = map[sequence]int{}
+	for i := range deltas {
+		// cannot start this loop before j > 3 as we would look at negative positions in list
+		if i < 4 {
+			continue
+		}
+		seq := sequence{
+			deltas[i-3],
+			deltas[i-2],
+			deltas[i-1],
+			deltas[i],
+		}
+		// record first position of each seq and the price at that point
+		if _, exists := localBananasPerSeq[seq]; !exists {
+			localBananasPerSeq[seq] = prices[i]
+		}
+	}
+	return localBananasPerSeq
+}
+
+func calculateMaximumBananas(secretNumbers []int) (maximumBananas int) {
+	globalBananasPerSeq := map[sequence]int{}
+
+	for _, secretNumber := range secretNumbers {
+		prices, deltas := getPricesAndDeltas(secretNumber)
+		localBananasPerSeq := calculateBananaMap(deltas, prices)
+		for seq, bananas := range localBananasPerSeq {
+			globalBananasPerSeq[seq] += bananas
+		}
+	}
+
+	// try out all sequences
+	for _, bananas := range globalBananasPerSeq {
+		if maximumBananas < bananas {
+			maximumBananas = bananas
+		}
+	}
+	return maximumBananas
+}
+
 func main() {
 	secretNumbers := read_input()
 	secretNumberSum := 0
@@ -104,5 +168,6 @@ func main() {
 
 	fmt.Println("part 1: ", secretNumberSum)
 
-	// fmt.Println("part 2: ", )
+	maximumBananas := calculateMaximumBananas(secretNumbers)
+	fmt.Println("part 2: ", maximumBananas)
 }
